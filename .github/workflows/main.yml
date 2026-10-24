@@ -16,29 +16,30 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Cache Buildozer (Saves 18 minutes on rebuilds!)
+      - name: Cache Buildozer (Fast Rebuilds)
         uses: actions/cache@v4
         with:
           path: |
             .buildozer
             ~/.buildozer
-          key: buildozer-cache-v1
+          key: buildozer-kivy230-cache-v2
 
-      - name: Install All Linux & Android Build Dependencies
+      - name: Install All Linux, SDL2 & Android Build Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential git zip unzip openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev automake libltdl-dev lld libstdc++6
+          sudo apt-get install -y build-essential git zip unzip openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev automake libltdl-dev lld libstdc++6 libsdl2-dev libsdl2-image-dev libsdl2-mixer-dev libsdl2-ttf-dev libportmidi-dev
 
       - name: Install Buildozer & Cython
         run: |
           pip install --upgrade pip "setuptools<70.0.0" wheel
-          pip install cython==0.29.33 buildozer
+          pip install cython==0.29.36 buildozer
 
-      - name: Patch buildozer.spec & Build APK
+      - name: Patch buildozer.spec for Kivy 2.3.0 & Build APK
         run: |
-          # Ensure p4a branch is set to master/develop to avoid old Python compilation bugs
+          # Pin Kivy 2.3.0 + pyjnius 1.6.1 + p4a develop branch so Kivy compilation never fails
+          sed -i 's/requirements = .*/requirements = python3,kivy==2.3.0,pyjnius==1.6.1,plyer/g' buildozer.spec
           if ! grep -q "p4a.branch" buildozer.spec; then
-            echo "p4a.branch = develop" >> buildozer.spec
+            sed -i '/\[app\]/a p4a.branch = develop' buildozer.spec
           fi
           yes | buildozer -v android debug
 
