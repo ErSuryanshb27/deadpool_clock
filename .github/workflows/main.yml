@@ -16,24 +16,29 @@ jobs:
         with:
           python-version: '3.10'
 
-      - name: Install Linux System Dependencies
+      - name: Cache Buildozer (Saves 18 minutes on rebuilds!)
+        uses: actions/cache@v4
+        with:
+          path: |
+            .buildozer
+            ~/.buildozer
+          key: buildozer-cache-v1
+
+      - name: Install All Linux & Android Build Dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y build-essential git zip unzip openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
+          sudo apt-get install -y build-essential git zip unzip openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev automake libltdl-dev lld libstdc++6
 
       - name: Install Buildozer & Cython
         run: |
           pip install --upgrade pip "setuptools<70.0.0" wheel
           pip install cython==0.29.33 buildozer
 
-      - name: Build Android APK
+      - name: Patch buildozer.spec & Build APK
         run: |
-          if [ ! -f buildozer.spec ]; then
-            buildozer init
-            sed -i 's/title = My Application/title = Deadpool Clock/g' buildozer.spec
-            sed -i 's/package.name = myapp/package.name = deadpoolclock/g' buildozer.spec
-            sed -i 's/source.include_exts = py,png,jpg,kv,atlas/source.include_exts = py,png,jpg,kv,atlas,mp3,wav/g' buildozer.spec
-            sed -i 's/requirements = python3,kivy/requirements = python3,kivy,plyer/g' buildozer.spec
+          # Ensure p4a branch is set to master/develop to avoid old Python compilation bugs
+          if ! grep -q "p4a.branch" buildozer.spec; then
+            echo "p4a.branch = develop" >> buildozer.spec
           fi
           yes | buildozer -v android debug
 
