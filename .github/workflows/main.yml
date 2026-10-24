@@ -11,11 +11,31 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build APK with Buildozer
-        uses: ArtemSBulgakov/buildozer-action@v1
+      - name: Set up Python 3.10
+        uses: actions/setup-python@v5
         with:
-          workdir: .
-          buildozer_version: master
+          python-version: '3.10'
+
+      - name: Install Linux System Dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential git zip unzip openjdk-17-jdk autoconf libtool pkg-config zlib1g-dev libncurses5-dev libncursesw5-dev libtinfo5 cmake libffi-dev libssl-dev
+
+      - name: Install Buildozer & Cython
+        run: |
+          pip install --upgrade pip "setuptools<70.0.0" wheel
+          pip install cython==0.29.33 buildozer
+
+      - name: Build Android APK
+        run: |
+          if [ ! -f buildozer.spec ]; then
+            buildozer init
+            sed -i 's/title = My Application/title = Deadpool Clock/g' buildozer.spec
+            sed -i 's/package.name = myapp/package.name = deadpoolclock/g' buildozer.spec
+            sed -i 's/source.include_exts = py,png,jpg,kv,atlas/source.include_exts = py,png,jpg,kv,atlas,mp3,wav/g' buildozer.spec
+            sed -i 's/requirements = python3,kivy/requirements = python3,kivy,plyer/g' buildozer.spec
+          fi
+          yes | buildozer -v android debug
 
       - name: Upload Deadpool APK
         uses: actions/upload-artifact@v4
