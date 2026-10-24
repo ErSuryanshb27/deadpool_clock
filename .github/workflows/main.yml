@@ -11,18 +11,18 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python 3.10
+      - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
-          python-version: '3.10'
+          python-version: '3.11'
 
-      - name: Cache Buildozer (Fast Rebuilds)
+      - name: Cache Buildozer (Clean v3 Cache)
         uses: actions/cache@v4
         with:
           path: |
             .buildozer
             ~/.buildozer
-          key: buildozer-kivy230-cache-v2
+          key: buildozer-kivy230-py311-v3
 
       - name: Install All Linux, SDL2 & Android Build Dependencies
         run: |
@@ -32,15 +32,15 @@ jobs:
       - name: Install Buildozer & Cython
         run: |
           pip install --upgrade pip "setuptools<70.0.0" wheel
-          pip install cython==0.29.36 buildozer
+          pip install "cython<3.0.0" buildozer
 
-      - name: Patch buildozer.spec for Kivy 2.3.0 & Build APK
+      - name: Patch buildozer.spec for Stable Python 3.11 & Build APK
         run: |
-          # Pin Kivy 2.3.0 + pyjnius 1.6.1 + p4a develop branch so Kivy compilation never fails
-          sed -i 's/requirements = .*/requirements = python3,kivy==2.3.0,pyjnius==1.6.1,plyer/g' buildozer.spec
-          if ! grep -q "p4a.branch" buildozer.spec; then
-            sed -i '/\[app\]/a p4a.branch = develop' buildozer.spec
-          fi
+          # Remove manual pyjnius pin so p4a uses its internal recipe
+          sed -i 's/requirements = .*/requirements = python3,kivy==2.3.0,plyer/g' buildozer.spec
+          # Remove any old p4a.branch lines and lock to stable release-2024.01.21 (Python 3.11)
+          sed -i '/p4a.branch/d' buildozer.spec
+          sed -i '/\[app\]/a p4a.branch = release-2024.01.21' buildozer.spec
           yes | buildozer -v android debug
 
       - name: Upload Deadpool APK
